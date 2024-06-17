@@ -272,8 +272,8 @@ class Api:
         mask_image.save(buffered, format="PNG")
         mask=base64.b64encode(buffered.getbuffer()).decode("utf-8")
         visual_service = VisualService()
-        visual_service.set_ak('AKLTMDM0ZDYzYmI2NGEzNGFiNWJhMjFhYTIwZjM1ZGExNzg')
-        visual_service.set_sk('T0RJMVlUYzBaRFJtTXpOaE5EUXhOV0poWXpRd1lqTTFZalEyTnpBM056Yw==')
+        visual_service.set_ak('')
+        visual_service.set_sk('')
         form = {
             "req_key": "i2i_inpainting",
             "binary_data_base64": [image, mask]
