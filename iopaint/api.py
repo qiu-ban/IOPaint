@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import json
 import os
 import re
 import threading
@@ -15,6 +16,7 @@ import numpy as np
 import socketio
 import torch
 from volcengine.visual.VisualService import VisualService
+from configparser import ConfigParser
 
 try:
     torch._C._jit_override_can_fuse_on_cpu(False)
@@ -70,6 +72,10 @@ from iopaint.schema import (
 
 CURRENT_DIR = Path(__file__).parent.absolute().resolve()
 WEB_APP_DIR = CURRENT_DIR / "web_app"
+
+# 读取配置文件
+with open('./conf.json', 'r') as f:
+    config_map = json.load(f)
 
 
 def api_middleware(app: FastAPI):
@@ -272,8 +278,8 @@ class Api:
         mask_image.save(buffered, format="PNG")
         mask=base64.b64encode(buffered.getbuffer()).decode("utf-8")
         visual_service = VisualService()
-        visual_service.set_ak('AKLTMDM0ZDYzYmI2NGEzNGFiNWJhMjFhYTIwZjM1ZGExNzg')
-        visual_service.set_sk('T0RJMVlUYzBaRFJtTXpOaE5EUXhOV0poWXpRd1lqTTFZalEyTnpBM056Yw==')
+        visual_service.set_ak(config_map.get('ak'))
+        visual_service.set_sk(config_map.get('sk'))
         form = {
             "req_key": "i2i_inpainting",
             "binary_data_base64": [image, mask]
