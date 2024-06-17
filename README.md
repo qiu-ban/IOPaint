@@ -20,7 +20,7 @@ pip install -r requirements.txt
 python3 main.py start --model lama --port 9999 --model-dir=./models
 ```
 
-`conf.json`文件中，填写火山引擎的ak和sk。
+`conf.json`文件中，填写火山引擎的ak和sk。注意，每次push时，把你的ak、sk删除，不要上传
 
 以上操作完毕后，浏览器访问`http://localhost:5173/` ，在使用消除功能时，如果在控制台看到文案`**********魔改，使用火山引擎inpainting能力**********`，说明执行正确。
 
