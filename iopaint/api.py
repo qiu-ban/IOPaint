@@ -1,15 +1,20 @@
 import asyncio
+import base64
 import os
+import re
 import threading
 import time
 import traceback
+from io import BytesIO
 from pathlib import Path
 from typing import Optional, Dict, List
 
 import cv2
+import numpy
 import numpy as np
 import socketio
 import torch
+from volcengine.visual.VisualService import VisualService
 
 try:
     torch._C._jit_override_can_fuse_on_cpu(False)
@@ -252,44 +257,76 @@ class Api:
         return GenInfoResponse(prompt=prompt, negative_prompt=negative_prompt)
 
     def api_inpaint(self, req: InpaintRequest):
-        image, alpha_channel, infos = decode_base64_to_image(req.image)
-        mask, _, _ = decode_base64_to_image(req.mask, gray=True)
-
-        mask = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)[1]
-        if image.shape[:2] != mask.shape[:2]:
-            raise HTTPException(
-                400,
-                detail=f"Image size({image.shape[:2]}) and mask size({mask.shape[:2]}) not match.",
+        '''
+        接口魔改过
+        '''
+        pattern = r'data:image/[^;]+;base64,'
+        image = re.sub(pattern, "", req.image)
+        mask = re.sub(pattern, "", req.mask)
+        mask_data = base64.b64decode(mask)
+        mask_image = Image.open(BytesIO(mask_data))
+        mask_image = cv2.cvtColor(cv2.UMat(numpy.array(mask_image)), cv2.COLOR_BGR2RGB)
+        mask_umat = cv2.threshold(mask_image, 127, 255, cv2.THRESH_BINARY)[1]
+        mask_image = Image.fromarray(mask_umat.get())
+        buffered = BytesIO()
+        mask_image.save(buffered, format="PNG")
+        mask=base64.b64encode(buffered.getbuffer()).decode("utf-8")
+        visual_service = VisualService()
+        visual_service.set_ak('AKLTMDM0ZDYzYmI2NGEzNGFiNWJhMjFhYTIwZjM1ZGExNzg')
+        visual_service.set_sk('T0RJMVlUYzBaRFJtTXpOaE5EUXhOV0poWXpRd1lqTTFZalEyTnpBM056Yw==')
+        form = {
+            "req_key": "i2i_inpainting",
+            "binary_data_base64": [image, mask]
+        }
+        print("**********魔改，使用火山引擎inpainting能力**********")
+        try:
+            resp = visual_service.img2img_inpainting(form)
+            result_base64=resp['data']['binary_data_base64'][0]
+            return Response(
+                content=base64.b64decode(result_base64),
+                media_type=f"image/png",
+                headers={"X-Seed": str(req.sd_seed)}
             )
-
-        if req.paint_by_example_example_image:
-            paint_by_example_image, _, _ = decode_base64_to_image(
-                req.paint_by_example_example_image
-            )
-
-        start = time.time()
-        rgb_np_img = self.model_manager(image, mask, req)
-        logger.info(f"process time: {(time.time() - start) * 1000:.2f}ms")
-        torch_gc()
-
-        rgb_np_img = cv2.cvtColor(rgb_np_img.astype(np.uint8), cv2.COLOR_BGR2RGB)
-        rgb_res = concat_alpha_channel(rgb_np_img, alpha_channel)
-
-        ext = "png"
-        res_img_bytes = pil_to_bytes(
-            Image.fromarray(rgb_res),
-            ext=ext,
-            quality=self.config.quality,
-            infos=infos,
-        )
-
-        asyncio.run(self.sio.emit("diffusion_finish"))
-
-        return Response(
-            content=res_img_bytes,
-            media_type=f"image/{ext}",
-            headers={"X-Seed": str(req.sd_seed)},
-        )
+        except Exception as e:
+            traceback.print_exc()
+        # image, alpha_channel, infos = decode_base64_to_image(req.image)
+        # mask, _, _ = decode_base64_to_image(req.mask, gray=True)
+        #
+        # mask = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)[1]
+        # if image.shape[:2] != mask.shape[:2]:
+        #     raise HTTPException(
+        #         400,
+        #         detail=f"Image size({image.shape[:2]}) and mask size({mask.shape[:2]}) not match.",
+        #     )
+        #
+        # if req.paint_by_example_example_image:
+        #     paint_by_example_image, _, _ = decode_base64_to_image(
+        #         req.paint_by_example_example_image
+        #     )
+        #
+        # start = time.time()
+        # rgb_np_img = self.model_manager(image, mask, req)
+        # logger.info(f"process time: {(time.time() - start) * 1000:.2f}ms")
+        # torch_gc()
+        #
+        # rgb_np_img = cv2.cvtColor(rgb_np_img.astype(np.uint8), cv2.COLOR_BGR2RGB)
+        # rgb_res = concat_alpha_channel(rgb_np_img, alpha_channel)
+        #
+        # ext = "png"
+        # res_img_bytes = pil_to_bytes(
+        #     Image.fromarray(rgb_res),
+        #     ext=ext,
+        #     quality=self.config.quality,
+        #     infos=infos,
+        # )
+        #
+        # asyncio.run(self.sio.emit("diffusion_finish"))
+        #
+        # return Response(
+        #     content=res_img_bytes,
+        #     media_type=f"image/{ext}",
+        #     headers={"X-Seed": str(req.sd_seed)},
+        # )
 
     def api_run_plugin_gen_image(self, req: RunPluginRequest):
         ext = "png"
