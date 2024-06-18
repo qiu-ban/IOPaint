@@ -3,7 +3,7 @@ from io import BytesIO
 from PIL import Image
 
 
-def compress_image(image_base64, format, target_size=1920):
+def compress_image(image_base64, format, target_size=1080):
     with Image.open(BytesIO(base64.b64decode(image_base64))) as image:
         # 如果图片尺寸已经是1080p或更小，则不做任何处理直接返回
         if image.size[0] <= target_size:
@@ -33,11 +33,3 @@ def shift_image_if_need(image, mask):
     image_image.save(buffered, format='png')
     image_base64 = base64.b64encode(buffered.getbuffer()).decode("utf-8")
     return image_base64
-
-
-
-
-if __name__ == '__main__':
-    with open('./assets/manga.png', 'rb') as f:
-        image_id = "123.png"
-        delete_image_2_oss(image_id)

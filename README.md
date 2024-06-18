@@ -2,12 +2,14 @@
 安装[nodejs](https://nodejs.org/en)，然后安装前端相应依赖
 
 ```bash
-git clone https://github.com/Sanster/IOPaint.git
+git clone https://github.com/qiu-ban/IOPaint.git
 cd IOPaint/web_app
 npm install
 npm run build
 cp -r dist/ ../iopaint/web_app
 ```
+
+`web-app`下新建`.env.local`文件，写入`VITE_BACKEND=http://127.0.0.1:9999`
 
 运行前端
 ```bash
