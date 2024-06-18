@@ -21,6 +21,5 @@ easydict
 gradio==4.21.0
 typer-config==1.4.0
 volcengine
-tos
 
 Pillow==9.5.0 # for AnyText
