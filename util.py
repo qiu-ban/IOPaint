@@ -4,16 +4,6 @@ import tos
 from PIL import Image
 from tos import HttpMethodType
 
-from config import config_map
-
-
-tos_ak = config_map.get('tos-ak')
-tos_sk = config_map.get('tos-sk')
-tos_endpoint = "tos-cn-beijing.volces.com"
-tos_region = "cn-beijing"
-tos_bucket_name = "iopaint"
-tos_client = tos.TosClientV2(tos_ak, tos_sk, tos_endpoint, tos_region)
-
 
 def put_image_2_tos(image_id, image_base64, content_type):
     '''
@@ -84,6 +74,21 @@ def compress_image(image_base64, format, target_size=1920):
         image.save(buffered, format=format)
         image_base64=base64.b64encode(buffered.getbuffer()).decode("utf-8")
         return image_base64
+
+
+def shift_image_if_need(image, mask):
+    image_image = Image.open(BytesIO(base64.b64decode(image)))
+    mask_image = Image.open(BytesIO(base64.b64decode(mask)))
+
+    if image_image.size[0] == mask_image.size[1] and image_image.size[1] == mask_image.size[0]:
+        # mask左转90度
+        image_image = image_image.rotate(270, expand=True)
+    buffered = BytesIO()
+    image_image.save(buffered, format='png')
+    image_base64 = base64.b64encode(buffered.getbuffer()).decode("utf-8")
+    return image_base64
+
+
 
 
 if __name__ == '__main__':

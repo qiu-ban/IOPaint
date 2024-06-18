@@ -285,8 +285,10 @@ class Api:
         visual_service.set_sk(config_map.get('sk'))
         print("**********魔改，使用火山引擎inpainting能力**********")
         try:
+            image = util.shift_image_if_need(image, mask)
             if len(base64.b64decode(image)) >= 4*1024*1024:
                 # 原图压缩
+                print("**********进行图片压缩**********")
                 image = util.compress_image(image, image_format)
                 mask = util.compress_image(mask, 'png')
             form = {
