@@ -288,6 +288,7 @@ class Api:
             if len(base64.b64decode(image)) >= 4*1024*1024:
                 # 原图压缩
                 image = util.compress_image(image, image_format)
+                mask = util.compress_image(mask, 'png')
             form = {
                 "req_key": "i2i_inpainting",
                 "binary_data_base64": [image, mask]

@@ -67,19 +67,19 @@ def delete_image_2_oss(image_id):
         print('fail with unknown error: {}'.format(e))
 
 
-def compress_image(image_base64, format, target_size=(3000, 2000)):
+def compress_image(image_base64, format, target_size=1920):
     with Image.open(BytesIO(base64.b64decode(image_base64))) as image:
         # 如果图片尺寸已经是1080p或更小，则不做任何处理直接返回
-        if image.size[0] <= target_size[0] and image.size[1] <= target_size[1]:
+        if image.size[0] <= target_size:
             print(f"Image is already smaller than or equal to 1080p. Skipping compression.")
             return
 
         # 按比例调整尺寸
-        ratio = min(target_size[0] / image.size[0], target_size[1] / image.size[1])
+        ratio = target_size / image.size[0]
         new_size = (int(image.size[0] * ratio), int(image.size[1] * ratio))
 
         # 重新调整尺寸并保存
-        image = image.resize(new_size, Image.ANTIALIAS)
+        image = image.resize(new_size)
         buffered = BytesIO()
         image.save(buffered, format=format)
         image_base64=base64.b64encode(buffered.getbuffer()).decode("utf-8")
