@@ -2,13 +2,8 @@
 from __future__ import print_function
 
 import base64
-import json
-
 from volcengine.visual.VisualService import VisualService
-
-
-with open('./conf.json', 'r') as f:
-    config_map = json.load(f)
+from config import config_map
 
 
 def image_to_base64(file_path):

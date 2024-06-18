@@ -6,6 +6,7 @@ import re
 import threading
 import time
 import traceback
+import uuid
 from io import BytesIO
 from pathlib import Path
 from typing import Optional, Dict, List
@@ -17,6 +18,8 @@ import socketio
 import torch
 from volcengine.visual.VisualService import VisualService
 from configparser import ConfigParser
+
+import util
 
 try:
     torch._C._jit_override_can_fuse_on_cpu(False)
@@ -37,6 +40,7 @@ from fastapi.responses import JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from socketio import AsyncServer
+from config import config_map
 
 from iopaint.file_manager import FileManager
 from iopaint.helper import (
@@ -72,10 +76,6 @@ from iopaint.schema import (
 
 CURRENT_DIR = Path(__file__).parent.absolute().resolve()
 WEB_APP_DIR = CURRENT_DIR / "web_app"
-
-# 读取配置文件
-with open('./conf.json', 'r') as f:
-    config_map = json.load(f)
 
 
 def api_middleware(app: FastAPI):
@@ -269,6 +269,9 @@ class Api:
         pattern = r'data:image/[^;]+;base64,'
         image = re.sub(pattern, "", req.image)
         mask = re.sub(pattern, "", req.mask)
+        pattern2 = r'data:image/(?P<format>.+);base64,[^;]+'
+        match = re.match(pattern2, req.image)
+        image_format = match.group('format')
         mask_data = base64.b64decode(mask)
         mask_image = Image.open(BytesIO(mask_data))
         mask_image = cv2.cvtColor(cv2.UMat(numpy.array(mask_image)), cv2.COLOR_BGR2RGB)
@@ -280,12 +283,15 @@ class Api:
         visual_service = VisualService()
         visual_service.set_ak(config_map.get('ak'))
         visual_service.set_sk(config_map.get('sk'))
-        form = {
-            "req_key": "i2i_inpainting",
-            "binary_data_base64": [image, mask]
-        }
         print("**********魔改，使用火山引擎inpainting能力**********")
         try:
+            if len(base64.b64decode(image)) >= 4*1024*1024:
+                # 原图压缩
+                image = util.compress_image(image, image_format)
+            form = {
+                "req_key": "i2i_inpainting",
+                "binary_data_base64": [image, mask]
+            }
             resp = visual_service.img2img_inpainting(form)
             result_base64=resp['data']['binary_data_base64'][0]
             return Response(
@@ -293,6 +299,7 @@ class Api:
                 media_type=f"image/png",
                 headers={"X-Seed": str(req.sd_seed)}
             )
+
         except Exception as e:
             traceback.print_exc()
         # image, alpha_channel, infos = decode_base64_to_image(req.image)

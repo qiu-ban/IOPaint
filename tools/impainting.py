@@ -1,11 +1,6 @@
 import base64
-import json
-
 from volcengine.visual.VisualService import VisualService
-
-
-with open('./conf.json', 'r') as f:
-    config_map = json.load(f)
+from config import config_map
 
 
 def image_to_base64(file_path):
@@ -28,6 +23,6 @@ if __name__ == "__main__":
     resp = visual_service.img2img_inpainting(form)
     result = resp['data']['binary_data_base64'][0]
     decode_data = base64.b64decode(result)
-    file_name = './result.png'
+    file_name = '../result.png'
     with open(file_name, 'wb') as f:
         f.write(decode_data)
